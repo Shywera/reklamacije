@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Reklamacije — Dashboard{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-5">
+    <h1 class="text-xl font-bold text-gray-800">Reklamacije i nesukladnosti</h1>
+    <div class="flex gap-2">
+        <a href="/reklamacije/excel/izvoz" class="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-semibold rounded hover:bg-gray-100 transition-colors">↓ Excel</a>
+        <a href="/reklamacije/lista" class="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-semibold rounded hover:bg-gray-100 transition-colors">Sve reklamacije</a>
+        <a href="/reklamacije/nova" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-colors">+ Nova prijava</a>
+    </div>
+</div>
+
+{# ── KPI kartice ─────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-5 gap-4 mb-5">
+    <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-4">
+        <div class="text-2xl font-bold font-mono text-gray-900">{{ ukupno }}</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Ukupno prijava</div>
+    </div>
+    <div class="bg-white rounded-lg border {% if otvorene > 0 %}border-amber-300 bg-amber-50{% else %}border-gray-300{% endif %} shadow-sm p-4">
+        <div class="text-2xl font-bold font-mono {% if otvorene > 0 %}text-amber-700{% else %}text-gray-900{% endif %}">{{ otvorene }}</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Otvorene</div>
+    </div>
+    <div class="bg-white rounded-lg border {% if prekoraceni > 0 %}border-red-300 bg-red-50{% else %}border-gray-300{% endif %} shadow-sm p-4">
+        <div class="text-2xl font-bold font-mono {% if prekoraceni > 0 %}text-red-700{% else %}text-gray-900{% endif %}">{{ prekoraceni }}</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Prekoračen rok</div>
+    </div>
+    <div class="bg-white rounded-lg border {% if capa_otv > 0 %}border-orange-300 bg-orange-50{% else %}border-gray-300{% endif %} shadow-sm p-4">
+        <div class="text-2xl font-bold font-mono {% if capa_otv > 0 %}text-orange-700{% else %}text-gray-900{% endif %}">{{ capa_otv }}</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Otvorene CAPA mjere</div>
+    </div>
+    <div class="bg-white rounded-lg border {% if copq_neto > 0 %}border-red-300 bg-red-50{% else %}border-gray-300{% endif %} shadow-sm p-4">
+        <div class="text-2xl font-bold font-mono {% if copq_neto > 0 %}text-red-700{% else %}text-gray-900{% endif %}">{{ "%.0f"|format(copq_neto) }} €</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Neto COPQ{% if copq_ukupno > copq_neto %} <span class="text-gray-400 normal-case">(bruto {{ "%.0f"|format(copq_ukupno) }})</span>{% endif %}</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-3 gap-4">
+
+    {# ── Po statusu ─────────────────────────────────────────────────────── #}
+    <div class="bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden">
+        <div class="bg-slate-700 px-4 py-2.5"><h2 class="text-xs font-bold uppercase tracking-widest text-white">Po statusu</h2></div>
+        <div class="p-3 space-y-1.5">
+            {% for kod, label, n in po_statusu %}
+            {% set boje = {"NOVO":"bg-blue-100 text-blue-700","U_OBRADI":"bg-amber-100 text-amber-700","CEKA":"bg-cyan-100 text-cyan-700","RIJESENO":"bg-green-100 text-green-700","ZATVORENO":"bg-gray-100 text-gray-500"} %}
+            <a href="/reklamacije/lista?status={{ kod }}" class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-gray-50 transition-colors group">
+                <span class="text-xs px-2 py-0.5 rounded-full font-semibold {{ boje.get(kod, 'bg-gray-100 text-gray-600') }}">{{ label }}</span>
+                <span class="text-sm font-bold font-mono text-gray-800">{{ n }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# ── Po vrsti ───────────────────────────────────────────────────────── #}
+    <div class="bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden">
+        <div class="bg-slate-700 px-4 py-2.5"><h2 class="text-xs font-bold uppercase tracking-widest text-white">Po vrsti</h2></div>
+        <div class="p-3 space-y-1.5">
+            {% for kod, label, n in po_vrsti %}
+            <a href="/reklamacije/lista?vrsta={{ kod }}" class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-gray-50 transition-colors">
+                <span class="text-sm text-gray-700">{{ label }}</span>
+                <span class="text-sm font-bold font-mono text-gray-800">{{ n }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# ── Kritične otvorene ──────────────────────────────────────────────── #}
+    <div class="bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden">
+        <div class="bg-red-700 px-4 py-2.5"><h2 class="text-xs font-bold uppercase tracking-widest text-white">Kritične otvorene</h2></div>
+        <div class="divide-y divide-gray-100">
+            {% for r in kriticne %}
+            <a href="/reklamacije/{{ r.id }}" class="flex items-start justify-between px-3 py-2 hover:bg-red-50 transition-colors">
+                <div class="min-w-0">
+                    <div class="text-[11px] font-mono text-gray-400">{{ r.broj_predmeta }}</div>
+                    <div class="text-sm font-medium text-gray-800 truncate">{{ r.naslov }}</div>
+                </div>
+                <span class="text-[10px] ml-2 shrink-0 px-1.5 py-0.5 rounded font-semibold
+                    {% if r.status=='NOVO' %}bg-blue-100 text-blue-700
+                    {% elif r.status=='U_OBRADI' %}bg-amber-100 text-amber-700
+                    {% else %}bg-gray-100 text-gray-500{% endif %}">
+                    {{ r.status_display }}
+                </span>
+            </a>
+            {% else %}
+            <div class="px-3 py-6 text-center text-sm text-green-600 font-medium">Nema kritičnih otvorenih ✓</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{# ── Zadnjih 10 ──────────────────────────────────────────────────────────── #}
+<div class="mt-4 bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden">
+    <div class="bg-slate-700 px-4 py-2.5 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-white">Zadnjih 10 prijava</h2>
+        <a href="/reklamacije/lista" class="text-xs text-slate-300 hover:text-white">Sve →</a>
+    </div>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-slate-800 text-white text-[11px] uppercase tracking-wide">
+                <th class="px-3 py-2 text-left w-32">Broj</th>
+                <th class="px-3 py-2 text-left">Naslov / Kupac</th>
+                <th class="px-3 py-2 text-center w-28">Vrsta</th>
+                <th class="px-3 py-2 text-center w-20">Prioritet</th>
+                <th class="px-3 py-2 text-center w-28">Status</th>
+                <th class="px-3 py-2 text-center w-16">CAPA</th>
+                <th class="px-3 py-2 text-right w-28">Datum</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in zadnjih %}
+            {% include "reklamacije/_row.html" %}
+            {% else %}
+            <tr><td colspan="7" class="px-3 py-8 text-center text-gray-400">Nema prijavljenih reklamacija.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

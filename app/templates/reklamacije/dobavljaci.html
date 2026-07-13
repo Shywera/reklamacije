@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Dobavljači — Scorecard{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-3 mb-5">
+    <a href="/reklamacije" class="text-sm text-blue-600 hover:underline">← Dashboard</a>
+    <h1 class="text-xl font-bold text-gray-800">Ocjena dobavljača (SCAR scorecard)</h1>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-slate-800 text-white text-[11px] uppercase tracking-wide">
+                <th class="px-3 py-2 text-left">Dobavljač</th>
+                <th class="px-3 py-2 text-center w-24">SCAR</th>
+                <th class="px-3 py-2 text-center w-24">Otvoreni</th>
+                <th class="px-3 py-2 text-right w-32">Reklamirano (€)</th>
+                <th class="px-3 py-2 text-right w-32">Naplaćeno (€)</th>
+                <th class="px-3 py-2 text-center w-28">Stopa naplate</th>
+                <th class="px-3 py-2 text-center w-32">Prosj. odgovor</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for d in kartice %}
+        <tr class="border-b border-gray-100 even:bg-gray-50">
+            <td class="px-3 py-2 font-semibold text-gray-800">{{ d.dobavljac }}</td>
+            <td class="px-3 py-2 text-center font-mono">{{ d.broj }}</td>
+            <td class="px-3 py-2 text-center">
+                {% if d.otvoreni %}<span class="text-amber-700 font-semibold">{{ d.otvoreni }}</span>{% else %}<span class="text-gray-400">0</span>{% endif %}
+            </td>
+            <td class="px-3 py-2 text-right font-mono">{{ "%.2f"|format(d.reklamirano) }}</td>
+            <td class="px-3 py-2 text-right font-mono">{{ "%.2f"|format(d.naplaceno) }}</td>
+            <td class="px-3 py-2 text-center">
+                {% if d.stopa_naplate is not none %}
+                <span class="text-[11px] px-2 py-0.5 rounded-full font-semibold
+                    {% if d.stopa_naplate >= 75 %}bg-green-100 text-green-700
+                    {% elif d.stopa_naplate >= 40 %}bg-amber-100 text-amber-700
+                    {% else %}bg-red-100 text-red-700{% endif %}">{{ d.stopa_naplate }}%</span>
+                {% else %}<span class="text-gray-300">—</span>{% endif %}
+            </td>
+            <td class="px-3 py-2 text-center font-mono text-gray-600">{{ d.prosj_odgovor ~ ' d' if d.prosj_odgovor is not none else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="px-3 py-8 text-center text-gray-400">Nema pokrenutih SCAR-ova prema dobavljačima.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="text-[11px] text-gray-400 mt-2">Prosj. odgovor = prosječan broj dana od slanja SCAR-a do datuma odgovora. Stopa naplate = priznato / reklamirano.</p>
+{% endblock %}

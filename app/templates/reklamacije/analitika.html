@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Analitika — QMS{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-5">
+    <div class="flex items-center gap-3">
+        <a href="/reklamacije" class="text-sm text-blue-600 hover:underline">← Dashboard</a>
+        <h1 class="text-xl font-bold text-gray-800">Analitika kvalitete</h1>
+    </div>
+    <a href="/reklamacije/excel/izvoz" class="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-semibold rounded hover:bg-gray-100">↓ Excel</a>
+</div>
+
+{# KPI #}
+<div class="grid grid-cols-4 gap-4 mb-5">
+    <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-4">
+        <div class="text-2xl font-bold font-mono text-gray-900">{{ total }}</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Ukupno reklamacija</div>
+    </div>
+    <div class="bg-white rounded-lg border {% if ontime_pct is not none and ontime_pct < 80 %}border-amber-300 bg-amber-50{% else %}border-gray-300{% endif %} shadow-sm p-4">
+        <div class="text-2xl font-bold font-mono text-gray-900">{{ ontime_pct if ontime_pct is not none else '—' }}{% if ontime_pct is not none %}%{% endif %}</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Rok ispoštovan (zatvorene)</div>
+    </div>
+    <div class="bg-white rounded-lg border {% if recurrence_pct > 15 %}border-red-300 bg-red-50{% else %}border-gray-300{% endif %} shadow-sm p-4">
+        <div class="text-2xl font-bold font-mono text-gray-900">{{ recurrence_pct }}%</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Ponovljene ({{ ponovljene }})</div>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-4">
+        <div class="text-2xl font-bold font-mono text-gray-900">{{ "%.0f"|format(copq_snosilac.INTERNO) }} €</div>
+        <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Interni COPQ (neto)</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-2 gap-4">
+    <div class="bg-white rounded-lg border border-gray-300 shadow-md p-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-600 mb-3">Pareto — kategorije defekata</h2>
+        {% if pareto %}<canvas id="paretoChart" height="130"></canvas>{% else %}<p class="text-sm text-gray-400 py-8 text-center">Nema klasificiranih defekata.</p>{% endif %}
+    </div>
+    <div class="bg-white rounded-lg border border-gray-300 shadow-md p-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-600 mb-3">Trend — broj i COPQ po mjesecu</h2>
+        {% if trend %}<canvas id="trendChart" height="130"></canvas>{% else %}<p class="text-sm text-gray-400 py-8 text-center">Nema podataka.</p>{% endif %}
+    </div>
+    <div class="bg-white rounded-lg border border-gray-300 shadow-md p-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-600 mb-3">Izvor defekta</h2>
+        {% if po_izvoru %}<canvas id="izvorChart" height="150"></canvas>{% else %}<p class="text-sm text-gray-400 py-8 text-center">Nema podataka o izvoru.</p>{% endif %}
+    </div>
+    <div class="bg-white rounded-lg border border-gray-300 shadow-md p-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-600 mb-3">COPQ po snosiocu / On-time</h2>
+        <div class="grid grid-cols-2 gap-2">
+            <canvas id="snosChart" height="150"></canvas>
+            <canvas id="ontimeChart" height="150"></canvas>
+        </div>
+    </div>
+</div>
+
+{# Top dobavljači SCAR #}
+<div class="mt-4 bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden">
+    <div class="bg-slate-700 px-4 py-2.5"><h2 class="text-xs font-bold uppercase tracking-widest text-white">Top dobavljači (SCAR)</h2></div>
+    <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 text-[10px] uppercase text-gray-500 border-b border-gray-200">
+            <th class="px-3 py-2 text-left">Dobavljač</th><th class="px-3 py-2 text-right w-32">Broj SCAR</th><th class="px-3 py-2 text-right w-40">Naplaćeno (€)</th></tr></thead>
+        <tbody>
+        {% for d in top_dobavljaci %}
+        <tr class="border-b border-gray-100 even:bg-gray-50">
+            <td class="px-3 py-2 text-gray-800">{{ d.dobavljac }}</td>
+            <td class="px-3 py-2 text-right font-mono">{{ d.broj }}</td>
+            <td class="px-3 py-2 text-right font-mono">{{ "%.2f"|format(d.naplaceno) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="px-3 py-6 text-center text-gray-400">Nema pokrenutih SCAR-ova.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const pareto = {{ pareto|tojson }};
+const trend = {{ trend|tojson }};
+const izvor = {{ po_izvoru|tojson }};
+const snos = {{ copq_snosilac|tojson }};
+const ontime = {on: {{ on_time }}, late: {{ late }}};
+const PALETA = ['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#64748b'];
+
+function mk(id, cfg){ const el=document.getElementById(id); if(el) new Chart(el, cfg); }
+
+if (pareto.length) mk('paretoChart', {
+    data: {
+        labels: pareto.map(p=>p.label),
+        datasets: [
+            {type:'bar', label:'Broj', data: pareto.map(p=>p.n), backgroundColor:'#3b82f6', yAxisID:'y', order:2},
+            {type:'line', label:'Kumulativno %', data: pareto.map(p=>p.kum_pct), borderColor:'#ef4444', backgroundColor:'#ef4444', yAxisID:'y1', order:1, tension:0.2}
+        ]
+    },
+    options: {responsive:true, plugins:{legend:{labels:{font:{size:10}}}},
+        scales:{y:{beginAtZero:true, position:'left'}, y1:{beginAtZero:true, max:100, position:'right', grid:{drawOnChartArea:false}, ticks:{callback:v=>v+'%'}}}}
+});
+
+if (trend.length) mk('trendChart', {
+    data: {
+        labels: trend.map(t=>t.mj),
+        datasets: [
+            {type:'bar', label:'Broj reklamacija', data: trend.map(t=>t.broj), backgroundColor:'#3b82f6', yAxisID:'y'},
+            {type:'line', label:'COPQ neto (€)', data: trend.map(t=>t.copq), borderColor:'#ef4444', backgroundColor:'#ef4444', yAxisID:'y1', tension:0.2}
+        ]
+    },
+    options: {responsive:true, plugins:{legend:{labels:{font:{size:10}}}},
+        scales:{y:{beginAtZero:true, position:'left'}, y1:{beginAtZero:true, position:'right', grid:{drawOnChartArea:false}}}}
+});
+
+if (izvor.length) mk('izvorChart', {
+    type:'doughnut',
+    data:{labels: izvor.map(i=>i.label), datasets:[{data: izvor.map(i=>i.n), backgroundColor: PALETA}]},
+    options:{responsive:true, plugins:{legend:{position:'right', labels:{font:{size:10}}}}}
+});
+
+mk('snosChart', {
+    type:'bar',
+    data:{labels:['Interno','Kupac','Dobavljač'], datasets:[{label:'€', data:[snos.INTERNO, snos.KUPAC, snos.DOBAVLJAC], backgroundColor:['#ef4444','#3b82f6','#f59e0b']}]},
+    options:{responsive:true, plugins:{legend:{display:false}, title:{display:true, text:'COPQ po snosiocu (€)', font:{size:10}}}, scales:{y:{beginAtZero:true}}}
+});
+
+if (ontime.on + ontime.late > 0) mk('ontimeChart', {
+    type:'doughnut',
+    data:{labels:['U roku','Prekoračeno'], datasets:[{data:[ontime.on, ontime.late], backgroundColor:['#10b981','#ef4444']}]},
+    options:{responsive:true, plugins:{legend:{position:'bottom', labels:{font:{size:10}}}, title:{display:true, text:'Zatvaranje u roku', font:{size:10}}}}
+});
+</script>
+{% endblock %}

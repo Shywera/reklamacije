@@ -1,0 +1,56 @@
+<div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-slate-800 text-white text-[11px] uppercase tracking-wide">
+                <th class="px-3 py-2 text-left w-32">Broj</th>
+                <th class="px-3 py-2 text-left">Naslov / Kupac</th>
+                <th class="px-3 py-2 text-center w-32">Vrsta</th>
+                <th class="px-3 py-2 text-center w-24">Prioritet</th>
+                <th class="px-3 py-2 text-center w-28">Status</th>
+                <th class="px-3 py-2 text-center w-16">CAPA</th>
+                <th class="px-3 py-2 text-right w-28">Datum</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in reklamacije %}
+                {% include "reklamacije/_row.html" %}
+            {% else %}
+            <tr>
+                <td colspan="7" class="px-3 py-10 text-center text-gray-400 text-sm">
+                    {% if q or filter_status or filter_vrsta or filter_prioritet %}Nema rezultata za odabrane filtere.{% else %}Nema prijavljenih reklamacija.{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if total_pages > 1 or total is defined %}
+<div class="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+    <span>
+        {% if total == 0 %}Nema rezultata
+        {% elif total_pages == 1 %}{{ total }} reklamacija ukupno
+        {% else %}{{ (page-1)*per_page+1 }}–{{ [page*per_page, total]|min }} od {{ total }} · stranica {{ page }}/{{ total_pages }}
+        {% endif %}
+    </span>
+    {% if total_pages > 1 %}
+    <div class="flex gap-1">
+        {% if page > 1 %}
+        <button hx-get="/reklamacije/search?q={{ q|urlencode }}&status={{ filter_status }}&vrsta={{ filter_vrsta }}&prioritet={{ filter_prioritet }}&page={{ page-1 }}"
+                hx-target="#rek-result" hx-swap="innerHTML"
+                class="px-2.5 py-1 rounded border border-gray-300 hover:bg-gray-200 transition-colors">‹</button>
+        {% endif %}
+        {% for p in range([1,page-2]|max, [total_pages+1,page+3]|min) %}
+        <button hx-get="/reklamacije/search?q={{ q|urlencode }}&status={{ filter_status }}&vrsta={{ filter_vrsta }}&prioritet={{ filter_prioritet }}&page={{ p }}"
+                hx-target="#rek-result" hx-swap="innerHTML"
+                class="px-2.5 py-1 rounded border transition-colors {% if p==page %}bg-blue-600 text-white border-blue-600 font-semibold{% else %}border-gray-300 hover:bg-gray-200{% endif %}">{{ p }}</button>
+        {% endfor %}
+        {% if page < total_pages %}
+        <button hx-get="/reklamacije/search?q={{ q|urlencode }}&status={{ filter_status }}&vrsta={{ filter_vrsta }}&prioritet={{ filter_prioritet }}&page={{ page+1 }}"
+                hx-target="#rek-result" hx-swap="innerHTML"
+                class="px-2.5 py-1 rounded border border-gray-300 hover:bg-gray-200 transition-colors">›</button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}

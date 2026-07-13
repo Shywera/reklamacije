@@ -1,0 +1,119 @@
+<div id="troskovi-sekcija">
+{% set snosi_boje = {"INTERNO":"bg-red-100 text-red-700","KUPAC":"bg-blue-100 text-blue-700","DOBAVLJAC":"bg-amber-100 text-amber-700"} %}
+
+{% if r.troskovi %}
+<div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-gray-50 text-[10px] uppercase tracking-wide text-gray-500 border-b border-gray-200">
+                <th class="px-3 py-2 text-left w-44">Kategorija</th>
+                <th class="px-3 py-2 text-left">Opis</th>
+                <th class="px-3 py-2 text-right w-28">Količina × cijena</th>
+                <th class="px-3 py-2 text-right w-24">Iznos (€)</th>
+                <th class="px-3 py-2 text-center w-28">Snosi</th>
+                <th class="px-3 py-2 text-center w-20">Povrativo</th>
+                <th class="px-3 py-2 w-10"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in r.troskovi %}
+        <tr class="border-b border-gray-100 {% if loop.index0 % 2 == 1 %}bg-gray-50{% endif %} group">
+            <td class="px-3 py-2 text-xs font-medium text-gray-700">{{ t.kategorija_display }}</td>
+            <td class="px-3 py-2 text-xs text-gray-600">
+                {{ t.opis or "—" }}
+                {% if t.stroj %}<span class="text-gray-400">· {{ t.stroj }}</span>{% endif %}
+            </td>
+            <td class="px-3 py-2 text-right text-xs text-gray-500 font-mono">
+                {{ "%g"|format(t.kolicina) }}{% if t.jedinica %} {{ t.jedinica }}{% endif %}
+                × {{ "%.2f"|format(t.jed_cijena) }}
+            </td>
+            <td class="px-3 py-2 text-right text-sm font-semibold text-gray-800 font-mono">{{ "%.2f"|format(t.iznos) }}</td>
+            <td class="px-3 py-2 text-center">
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold {{ snosi_boje.get(t.tko_snosi,'bg-gray-100 text-gray-600') }}">{{ t.snosi_display }}</span>
+            </td>
+            <td class="px-3 py-2 text-center">
+                {% if t.povrativo %}<span class="text-green-600" title="Nadoknadiv trošak">✓</span>{% else %}<span class="text-gray-300">—</span>{% endif %}
+            </td>
+            <td class="px-3 py-2">
+                <button type="button"
+                        hx-post="/reklamacije/{{ r.id }}/trosak/{{ t.id }}/obrisi"
+                        hx-target="#troskovi-sekcija" hx-swap="outerHTML"
+                        hx-confirm="Obrisati ovu stavku troška?"
+                        class="opacity-0 group-hover:opacity-100 text-xs text-red-400 hover:text-red-600 border border-gray-200 rounded px-1.5 py-0.5 transition-all">✕</button>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="border-t-2 border-gray-300 bg-gray-50 text-xs">
+                <td class="px-3 py-2 font-bold text-gray-700 uppercase tracking-wide" colspan="3">Ukupno COPQ</td>
+                <td class="px-3 py-2 text-right font-bold text-gray-900 font-mono">{{ "%.2f"|format(r.trosak_ukupno) }}</td>
+                <td class="px-3 py-2 text-center text-[10px] text-gray-500" colspan="3">
+                    povrativo: {{ "%.2f"|format(r.trosak_povrativo) }} €
+                </td>
+            </tr>
+            <tr class="bg-red-50 text-xs">
+                <td class="px-3 py-2 font-bold text-red-700 uppercase tracking-wide" colspan="3">Neto trošak (tereti tvrtku)</td>
+                <td class="px-3 py-2 text-right font-bold text-red-700 font-mono">{{ "%.2f"|format(r.trosak_neto) }}</td>
+                <td class="px-3 py-2 text-center text-[10px] text-gray-500" colspan="3">
+                    {% set ps = r.trosak_po_snosiocu %}
+                    I: {{ "%.2f"|format(ps.INTERNO) }} · K: {{ "%.2f"|format(ps.KUPAC) }} · D: {{ "%.2f"|format(ps.DOBAVLJAC) }}
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% else %}
+<p class="px-4 py-3 text-sm text-gray-400">Nema evidentiranih troškova nekvalitete.</p>
+{% endif %}
+
+{# Add form #}
+<div class="px-4 py-3 bg-gray-50 border-t border-gray-200">
+    <form hx-post="/reklamacije/{{ r.id }}/trosak/dodaj"
+          hx-target="#troskovi-sekcija" hx-swap="outerHTML"
+          hx-on::after-request="if(event.detail.successful) this.reset()"
+          class="flex items-end gap-2 flex-wrap">
+        <div class="w-40">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Kategorija</label>
+            <select name="kategorija" class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% for kod, label in trosak_kat_choices %}
+                <option value="{{ kod }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex-1 min-w-[140px]">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Opis</label>
+            <input type="text" name="opis" placeholder="Kratak opis troška…"
+                   class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="w-20">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Količina</label>
+            <input type="text" name="kolicina" value="1" inputmode="decimal"
+                   class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="w-16">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Jed.</label>
+            <input type="text" name="jedinica" placeholder="kom"
+                   class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="w-24">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Cijena/jed (€)</label>
+            <input type="text" name="jed_cijena" value="0" inputmode="decimal"
+                   class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="w-36">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Tko snosi</label>
+            <select name="tko_snosi" class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% for kod, label in snosi_choices %}
+                <option value="{{ kod }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <label class="flex items-center gap-1 text-[11px] text-gray-600 pb-1.5" title="Trošak je nadoknadiv (naplata dobavljaču/osiguranju)">
+            <input type="checkbox" name="povrativo" value="1" class="rounded border-gray-300"> Povrativo
+        </label>
+        <button type="submit" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-colors">+ Dodaj trošak</button>
+    </form>
+    <p class="text-[10px] text-gray-400 mt-1">Iznos se računa kao <span class="font-mono">količina × cijena/jed</span>.</p>
+</div>
+</div>

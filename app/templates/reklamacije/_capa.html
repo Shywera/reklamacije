@@ -1,0 +1,94 @@
+<div id="capa-sekcija">
+{% set s_boje = {"PLANIRANA":"bg-blue-100 text-blue-700","U_TIJEKU":"bg-amber-100 text-amber-700","IZVRSENA":"bg-green-100 text-green-700","ODGODENA":"bg-gray-100 text-gray-500"} %}
+
+{% if r.capa %}
+<div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-gray-50 text-[10px] uppercase tracking-wide text-gray-500 border-b border-gray-200">
+                <th class="px-3 py-2 text-left w-28">Vrsta</th>
+                <th class="px-3 py-2 text-left">Opis mjere</th>
+                <th class="px-3 py-2 text-left w-28">Odg. osoba</th>
+                <th class="px-3 py-2 text-center w-24">Rok</th>
+                <th class="px-3 py-2 text-center w-28">Status</th>
+                <th class="px-3 py-2 w-10"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for c in r.capa %}
+        <tr class="border-b border-gray-100 {% if c.status=='IZVRSENA' %}bg-green-50{% elif c.je_prekoracen %}bg-red-50{% elif loop.index0 % 2 == 1 %}bg-gray-50{% endif %} group">
+            <td class="px-3 py-2">
+                <span class="text-[11px] font-medium {% if c.vrsta=='KOREKTIVNA' %}text-orange-700{% else %}text-purple-700{% endif %}">
+                    {{ c.vrsta_display }}
+                </span>
+            </td>
+            <td class="px-3 py-2 text-gray-800 text-xs">
+                {{ c.opis_mjere }}
+                {% if c.rezultat %}<div class="text-gray-400 mt-0.5 italic">↳ {{ c.rezultat[:80] }}{% if c.rezultat|length > 80 %}…{% endif %}</div>{% endif %}
+            </td>
+            <td class="px-3 py-2 text-xs text-gray-600">{{ c.odgovorna_osoba }}</td>
+            <td class="px-3 py-2 text-center text-xs {% if c.je_prekoracen %}text-red-600 font-semibold{% else %}text-gray-500{% endif %}">
+                {{ c.rok_izvrsenja.strftime("%d.%m.%Y") if c.rok_izvrsenja else "—" }}
+                {% if c.je_prekoracen %}<div class="text-[9px] text-red-500">⚠ Prekoračen</div>{% endif %}
+            </td>
+            <td class="px-3 py-2 text-center">
+                {# Inline status promjena #}
+                <form hx-post="/reklamacije/{{ r.id }}/capa/{{ c.id }}/status"
+                      hx-target="#capa-sekcija" hx-swap="outerHTML">
+                    <select name="status" onchange="this.form.submit()"
+                            class="text-[11px] px-1.5 py-0.5 rounded border border-gray-300 bg-white focus:outline-none cursor-pointer
+                                   {{ s_boje.get(c.status,'bg-gray-100 text-gray-600') }}">
+                        {% for kod, label in capa_status_choices %}
+                        <option value="{{ kod }}" {% if c.status==kod %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </td>
+            <td class="px-3 py-2">
+                <button type="button"
+                        hx-post="/reklamacije/{{ r.id }}/capa/{{ c.id }}/obrisi"
+                        hx-target="#capa-sekcija" hx-swap="outerHTML"
+                        hx-confirm="Obrisati ovu CAPA mjeru?"
+                        class="opacity-0 group-hover:opacity-100 text-xs text-red-400 hover:text-red-600 border border-gray-200 rounded px-1.5 py-0.5 transition-all">✕</button>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="px-4 py-3 text-sm text-gray-400">Nema dodanih CAPA mjera.</p>
+{% endif %}
+
+{# Add form #}
+<div class="px-4 py-3 bg-gray-50 border-t border-gray-200">
+    <form hx-post="/reklamacije/{{ r.id }}/capa/dodaj"
+          hx-target="#capa-sekcija" hx-swap="outerHTML"
+          class="flex items-end gap-2 flex-wrap">
+        <div class="w-36">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Vrsta</label>
+            <select name="vrsta" class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% for kod, label in capa_vrsta_choices %}
+                <option value="{{ kod }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex-1 min-w-[220px]">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Opis mjere *</label>
+            <input type="text" name="opis_mjere" required placeholder="Opis korektivne/preventivne mjere..."
+                   class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="w-32">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Odg. osoba *</label>
+            <input type="text" name="odgovorna_osoba" required
+                   class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="w-32">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Rok</label>
+            <input type="date" name="rok_izvrsenja"
+                   class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <button type="submit" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-colors">+ Dodaj CAPA</button>
+    </form>
+</div>
+</div>

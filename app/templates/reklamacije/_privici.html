@@ -1,0 +1,43 @@
+<div id="privici">
+    {% if greske %}
+    <div class="border border-red-300 bg-red-50 rounded p-2 mb-3 text-sm text-red-700">
+        {% for g in greske %}<div>✕ {{ g }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% if r.privici %}
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
+        {% for p in r.privici %}
+        <div class="relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50 group">
+            <a href="/reklamacije/{{ r.id }}/privitak/{{ p.id }}" target="_blank" class="block">
+                {% if p.vrsta == 'slika' and p.ima_thumb %}
+                <img src="/reklamacije/{{ r.id }}/privitak/{{ p.id }}/thumb" alt="" class="w-full h-28 object-cover">
+                {% else %}
+                <div class="w-full h-28 flex items-center justify-center text-4xl text-gray-300">
+                    {% if p.vrsta == 'slika' %}🖼{% else %}📄{% endif %}
+                </div>
+                {% endif %}
+            </a>
+            <div class="px-2 py-1">
+                <div class="text-[11px] text-gray-700 truncate" title="{{ p.original_name }}">{{ p.original_name }}</div>
+                <div class="text-[10px] text-gray-400">{{ p.velicina_kb }} KB</div>
+            </div>
+            <button hx-post="/reklamacije/{{ r.id }}/privitak/{{ p.id }}/obrisi"
+                    hx-target="#privici" hx-swap="outerHTML" hx-confirm="Obrisati privitak „{{ p.original_name }}\"?"
+                    class="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 text-red-500 hover:bg-red-500 hover:text-white text-xs shadow opacity-0 group-hover:opacity-100 transition">✕</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-sm text-gray-400 mb-3">Nema privitaka.</div>
+    {% endif %}
+
+    <form hx-post="/reklamacije/{{ r.id }}/privitak" hx-target="#privici" hx-swap="outerHTML"
+          hx-encoding="multipart/form-data" class="flex items-center gap-2 flex-wrap">
+        <input type="file" name="datoteke" multiple
+               accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.xlsx,.xls,.csv,.docx,.doc,.txt"
+               class="text-sm border border-gray-300 rounded px-2 py-1.5 max-w-xs">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded px-4 py-1.5">⤒ Dodaj privitke</button>
+        <span class="text-[11px] text-gray-400">slike (≤15 MB) i dokumenti (≤30 MB)</span>
+    </form>
+</div>

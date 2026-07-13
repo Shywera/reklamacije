@@ -1,0 +1,32 @@
+{% set s_boje = {"NOVO":"bg-blue-100 text-blue-700","U_OBRADI":"bg-amber-100 text-amber-700","CEKA":"bg-cyan-100 text-cyan-700","RIJESENO":"bg-green-100 text-green-700","ZATVORENO":"bg-gray-100 text-gray-500"} %}
+{% set p_boje = {"NIZAK":"bg-green-100 text-green-700","SREDNJI":"bg-blue-100 text-blue-700","VISOK":"bg-amber-100 text-amber-700","KRITICAN":"bg-red-100 text-red-700"} %}
+<tr class="border-b border-gray-100 hover:bg-blue-50 transition-colors cursor-pointer {% if r.rok_prekoracen %}bg-red-50{% elif loop is defined and loop.index0 % 2 == 1 %}bg-gray-50{% endif %}"
+    onclick="location='/reklamacije/{{ r.id }}'">
+    <td class="px-3 py-2">
+        <span class="font-mono text-xs font-semibold text-gray-600">{{ r.broj_predmeta }}</span>
+        {% if r.rok_prekoracen %}<span class="ml-1 text-[9px] text-red-500 font-bold">⚠ ROK</span>{% endif %}
+    </td>
+    <td class="px-3 py-2">
+        <div class="font-medium text-gray-800 truncate max-w-xs">{{ r.naslov }}</div>
+        {% if r.kupac_dobavljac %}<div class="text-xs text-gray-400 truncate">{{ r.kupac_dobavljac }}</div>{% endif %}
+    </td>
+    <td class="px-3 py-2 text-center">
+        <span class="text-[11px] text-gray-500">{{ r.vrsta_display }}</span>
+    </td>
+    <td class="px-3 py-2 text-center">
+        <span class="text-[11px] px-1.5 py-0.5 rounded-full font-semibold {{ p_boje.get(r.prioritet, 'bg-gray-100 text-gray-500') }}">{{ r.prioritet_display }}</span>
+    </td>
+    <td class="px-3 py-2 text-center">
+        <span class="text-[11px] px-1.5 py-0.5 rounded-full font-semibold {{ s_boje.get(r.status, 'bg-gray-100 text-gray-500') }}">{{ r.status_display }}</span>
+    </td>
+    <td class="px-3 py-2 text-center">
+        {% if r.broj_capa > 0 %}
+        <span class="text-xs font-mono {% if r.broj_otvorenih_capa > 0 %}text-amber-600 font-semibold{% else %}text-green-600{% endif %}">
+            {{ r.broj_otvorenih_capa }}/{{ r.broj_capa }}
+        </span>
+        {% else %}
+        <span class="text-gray-300">—</span>
+        {% endif %}
+    </td>
+    <td class="px-3 py-2 text-right text-xs text-gray-500">{{ r.datum_prijave.strftime("%d.%m.%Y") }}</td>
+</tr>

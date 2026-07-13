@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Reklamacije — Lista{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+        <a href="/reklamacije" class="text-sm text-blue-600 hover:underline">← Dashboard</a>
+        <h1 class="text-xl font-bold text-gray-800">Sve reklamacije</h1>
+    </div>
+    <div class="flex gap-2">
+        <a href="/reklamacije/excel/izvoz" class="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-semibold rounded hover:bg-gray-100 transition-colors">↓ Excel</a>
+        <a href="/reklamacije/nova" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-colors">+ Nova prijava</a>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden"
+     x-init="load()"
+     x-data="{
+         q: '',
+         status: '',
+         vrsta: '',
+         prioritet: '',
+         moje: {{ 'true' if request.query_params.get('moje') else 'false' }},
+         myId: {{ request.state.user.id if request.state and request.state.user else 0 }},
+         load() {
+             const p = new URLSearchParams();
+             if (this.q)        p.set('q', this.q);
+             if (this.status)   p.set('status', this.status);
+             if (this.vrsta)    p.set('vrsta', this.vrsta);
+             if (this.prioritet) p.set('prioritet', this.prioritet);
+             if (this.moje && this.myId) p.set('dodijeljeni', this.myId);
+             htmx.ajax('GET', '/reklamacije/search?' + p.toString(), {target:'#rek-result', swap:'innerHTML'});
+         }
+     }">
+
+    <div class="bg-slate-700 px-4 py-3 flex items-center gap-3 flex-wrap">
+
+        {# Status filter #}
+        <div class="flex rounded overflow-hidden border border-slate-500 shrink-0 text-[11px]">
+            <button type="button" @click="status=''; load()"
+                    :class="status==='' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:bg-slate-600 hover:text-white'"
+                    class="px-2.5 py-1.5 font-semibold transition-colors border-r border-slate-500">Svi</button>
+            {% for kod, label in status_choices %}
+            <button type="button" @click="status='{{ kod }}'; load()"
+                    :class="status==='{{ kod }}' ? 'bg-blue-500 text-white' : 'text-slate-300 hover:bg-slate-600 hover:text-white'"
+                    class="px-2.5 py-1.5 font-semibold transition-colors{% if not loop.last %} border-r border-slate-500{% endif %}">
+                {{ label }}
+            </button>
+            {% endfor %}
+        </div>
+
+        {# Moje reklamacije #}
+        <button type="button" @click="moje=!moje; load()"
+                :class="moje ? 'bg-amber-500 text-white border-amber-400' : 'text-slate-300 hover:bg-slate-600 hover:text-white border-slate-500'"
+                class="px-2.5 py-1.5 text-[11px] font-semibold rounded border transition-colors shrink-0">★ Moje</button>
+
+        {# Vrsta #}
+        <select @change="vrsta=$event.target.value; load()"
+                class="px-2 py-1.5 text-xs rounded border border-slate-500 bg-slate-800 text-slate-200 focus:outline-none focus:border-blue-400">
+            <option value="">Sve vrste</option>
+            {% for kod, label in vrsta_choices %}
+            <option value="{{ kod }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        {# Prioritet #}
+        <select @change="prioritet=$event.target.value; load()"
+                class="px-2 py-1.5 text-xs rounded border border-slate-500 bg-slate-800 text-slate-200 focus:outline-none focus:border-blue-400">
+            <option value="">Svi prioriteti</option>
+            {% for kod, label in prioritet_choices %}
+            <option value="{{ kod }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        {# Search #}
+        <input type="search" placeholder="Pretraži broj, naslov, prijavitelja, kupca..."
+               x-model.debounce.300ms="q"
+               @input.debounce.300ms="load()"
+               @search="load()"
+               class="ml-auto px-3 py-1.5 text-xs rounded border border-slate-500 bg-slate-800 text-slate-200
+                      placeholder-slate-500 focus:outline-none focus:border-blue-400 w-80 transition-colors">
+    </div>
+
+    <div id="rek-result">
+        <div class="px-3 py-10 text-center text-gray-400 text-sm">Učitavam...</div>
+    </div>
+</div>
+{% endblock %}
