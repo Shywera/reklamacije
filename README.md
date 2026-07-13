@@ -1,55 +1,46 @@
-# Reklamacije / QMS (samostalni app)
+# Reklamacije / QMS — Sustav upravljanja kvalitetom
 
-Samostalna verzija modula za **reklamacije / upravljanje kvalitetom (QMS)** — izdvojeno iz
-ERP/MES/WMS sustava. Isti kod (`app/modules/reklamacije`), ali vrti se zasebno: vlastita
-baza, server i izbornik.
+Web aplikacija za vođenje reklamacija i nesukladnosti u proizvodnji, po načelima
+ISO 9001 (t. 10.2): od prijave, preko analize uzroka i korektivnih mjera, do
+provjere učinkovitosti prije zatvaranja.
 
-## Funkcionalnost
-- **Reklamacije** — evidencija nesukladnosti/reklamacija (prijava, status, prioritet, vrsta,
-  kupac/dobavljač, opis, analiza uzroka 5×zašto).
-- **CAPA** — korektivne i preventivne mjere (vrsta, odgovorna osoba, rok, status, provjera).
-- **PDF** — ispis zapisnika o nesukladnosti (`/reklamacije/{id}/pdf`).
-- **Excel izvoz** — svih reklamacija + CAPA mjera (`/reklamacije/excel/izvoz`).
-- Dashboard s metrikama + lista s pretragom (HTMX).
+## Mogućnosti
 
-## Pokretanje
-```bat
-run.bat          REM lokalno (http://localhost:8601)
-dev-wifi.bat     REM dostupno na LAN-u (ispiše mrežni URL za drugo računalo)
-```
-Prvi put `run.bat` sam napravi `.venv`, instalira `requirements.txt` i digne server.
+- **Reklamacije i nesukladnosti** — interne, kupaca i dobavljača; automatska numeracija,
+  statusi, prioriteti, rokovi
+- **Taksonomija defekata** — 10 kategorija (boja, pasovanje, štanca, materijal…),
+  izvor defekta i težina → omogućuje Pareto analizu
+- **CAPA mjere** — korektivne/preventivne mjere s rokovima, odgovornima i praćenjem
+- **Troškovi nekvalitete (COPQ)** — stavke troška po kategoriji, tko snosi, nadoknadivi dio
+- **SCAR** — reklamacije prema dobavljačima: rokovi odgovora, rješenja, naplata, scorecard
+- **Privici** — slike i dokumenti uz reklamaciju (thumbnaili, kontrolirani tipovi)
+- **Gate učinkovitosti** — zatvaranje moguće tek uz potvrđenu provjeru učinkovitosti mjera
+- **FMEA/RPN** procjena rizika (S×O×D)
+- **Analitika** — Pareto defekata, trend, on-time zatvaranje, recurrence, COPQ (Chart.js)
+- **Prijava, dozvole, audit log, dodjela zaduženja, email podsjetnici** za prekoračene rokove
+- **PDF i Excel izvještaji**, automatski backup baze
 
-## Priprema za DRUGO RAČUNALO
-1. Na drugom računalu instaliraj **Python 3** (python.org) — pri instalaciji uključi
-   **„Add Python to PATH"**.
-2. Kopiraj cijeli folder **`Reklamacije-app`** na to računalo (USB / mreža).
-   - NE moraš kopirati `.venv` (stvara se sam); dovoljni su `app/`, `requirements.txt`, `*.bat`.
-3. Dvoklik na **`run.bat`** — prvi put instalira ovisnosti (~1 min) i digne app.
-4. Otvori **http://localhost:8601** u pregledniku.
-5. Za pristup s drugog uređaja na istoj mreži: pokreni **`dev-wifi.bat`** i upiši ispisani
-   `http://<IP>:8601` (po potrebi otvori firewall — naredba je ispisana).
+## Tehnologije
 
-> Podaci se spremaju u `reklamacije.db` (SQLite, u folderu appa). PDF koristi Arial
-> (Windows fontovi); fallback Helvetica ako fali.
+FastAPI · SQLAlchemy 2.0 · SQLite · Jinja2 · HTMX · Alpine.js · Tailwind CSS · reportlab · Chart.js
 
-## Backup baze
-- **Automatski:** na svakom pokretanju app napravi kopiju u `backup\reklamacije_<datum_vrijeme>.db`
-  (čuva zadnjih 20).
-- **Ručno (bez pokretanja):** dvoklik na **`backup.bat`** → kopija u `backup\`.
-- **Iz appa:** sidebar → **⤓ Backup baze (.db)** preuzme trenutnu bazu (i s drugog uređaja).
-- Glavna baza je `reklamacije.db` — pri selidbi na drugo računalo **kopiraj tu datoteku** (i/ili `backup\`).
+## Brzi start (Windows)
 
-> **Napomena (sigurnost):** app je dostupan svima na mreži (`0.0.0.0`) i **nema prijavu** —
-> bilo tko na WiFi-u može čitati/uređivati/brisati. Za interni siguran rad reci pa dodam prijavu
-> ili ograničim na samo ovo računalo (`localhost`).
+1. Instalirajte [Python 3](https://python.org) (*Add Python to PATH*)
+2. Pokrenite **`run.bat`** — prvi put izgradi okruženje i generira `.env`
+3. Otvorite **http://localhost:8601** — prijava `admin` / `admin` (odmah promijenite lozinku)
 
-## Struktura
-```
-app/
-  main.py                 # FastAPI, create_all (reklamacija, capa), root -> /reklamacije
-  core/                   # config + database (vlastiti, samostalni)
-  modules/reklamacije/    # ISTI kod kao u ERP-u (models/routes/utils) — NETAKNUT
-  templates/
-    base.html             # QMS-only izbornik
-    reklamacije/          # ISTI templati kao u ERP-u
-```
+## Konfiguracija (`.env`)
+
+| Varijabla | Opis |
+|---|---|
+| `ADMIN_PASSWORD` | lozinka početnog administratora |
+| `FIRMA_NAZIV` | naziv tvrtke za PDF zaglavlja (zadano demo) |
+| `NOTIF_ENABLED` + `SMTP_*` | email obavijesti (bez toga sustav radi, samo ne šalje) |
+
+Dnevna provjera rokova: `provjeri-rokove.bat` (Windows Task Scheduler).
+
+## Povezani projekti
+
+[ERP/MES/WMS](https://github.com/Shywera/erp) · [WMS](https://github.com/Shywera/wms) ·
+[Ponude](https://github.com/Shywera/Ponude) · [Alati](https://github.com/Shywera/tools)
