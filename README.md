@@ -1,5 +1,7 @@
 # Reklamacije / QMS — Sustav upravljanja kvalitetom
 
+[![CI](https://github.com/Shywera/reklamacije/actions/workflows/ci.yml/badge.svg)](https://github.com/Shywera/reklamacije/actions/workflows/ci.yml)
+
 Web aplikacija za vođenje reklamacija i nesukladnosti u proizvodnji, po načelima
 ISO 9001 (t. 10.2): od prijave, preko analize uzroka i korektivnih mjera, do
 provjere učinkovitosti prije zatvaranja.
