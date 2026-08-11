@@ -296,6 +296,102 @@
     </div>
 </div>
 
+{# ── Papirnati obrazac „Nesukladnost" ─────────────────────────────────────── #}
+<div class="bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden mb-4">
+    <div class="bg-slate-700 px-4 py-2.5 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-white">Obrazac nesukladnosti</h2>
+        {% if r and r.izvorna_mapa %}
+        <span class="text-[10px] text-slate-300">iz arhive: {{ r.izvorna_mapa }}</span>
+        {% endif %}
+    </div>
+    <div class="p-4 grid grid-cols-12 gap-3">
+        <div class="col-span-3">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Broj u obrascu</label>
+            <input type="text" name="izvorni_broj" value="{{ r.izvorni_broj or '' if r else '' }}"
+                   placeholder="01/2026"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+        </div>
+        <div class="col-span-5">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Porijeklo nesukladnosti</label>
+            <select name="porijeklo" class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">—</option>
+                {% for k, v in porijeklo_opcije.items() %}
+                <option value="{{ k }}" {% if r and r.porijeklo==k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Porijeklo — napomena</label>
+            <input type="text" name="porijeklo_napomena" value="{{ r.porijeklo_napomena or '' if r else '' }}"
+                   placeholder="npr. materijal, broj audita…"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Korekciju proveo</label>
+            <input type="text" name="korekciju_proveo" value="{{ r.korekciju_proveo or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-2">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Datum korekcije</label>
+            <input type="date" name="korekcija_datum"
+                   value="{{ r.korekcija_datum.isoformat() if r and r.korekcija_datum else '' }}"
+                   class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Uzrok potvrdio (odgovorna osoba)</label>
+            <input type="text" name="uzrok_potvrdio" value="{{ r.uzrok_potvrdio or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-2">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Treba korektivna?</label>
+            <select name="potrebna_korektivna" class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">—</option>
+                <option value="DA" {% if r and r.potrebna_korektivna=='DA' %}selected{% endif %}>Da</option>
+                <option value="NE" {% if r and r.potrebna_korektivna=='NE' %}selected{% endif %}>Ne</option>
+            </select>
+        </div>
+
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Mjeru definirao</label>
+            <input type="text" name="radnju_definirao" value="{{ r.radnju_definirao or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Direktor (potpis)</label>
+            <input type="text" name="direktor_potpis" value="{{ r.direktor_potpis or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Šifra materijala</label>
+            <input type="text" name="sifra_materijala" value="{{ r.sifra_materijala or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Lot / šarža</label>
+            <input type="text" name="lot_sarza" value="{{ r.lot_sarza or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Broj primke</label>
+            <input type="text" name="broj_primke" value="{{ r.broj_primke or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        {% if r and r.izvorni_zapis %}
+        <div class="col-span-12">
+            <details class="border border-gray-300 rounded">
+                <summary class="px-3 py-2 text-xs font-semibold text-gray-600 cursor-pointer select-none hover:bg-gray-50">
+                    Cijeli obrazac kako je bio popunjen u Wordu
+                </summary>
+                <pre class="px-3 py-2 text-[11px] leading-relaxed text-gray-700 whitespace-pre-wrap border-t border-gray-200 max-h-96 overflow-auto">{{ r.izvorni_zapis }}</pre>
+            </details>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 {# Akcije #}
 <div class="flex items-center justify-between mb-6">
     <div class="flex gap-2">

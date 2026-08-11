@@ -11,11 +11,15 @@ from pathlib import Path
 UPLOAD_DIR = Path("uploads")
 
 SLIKE = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
-DOKUMENTI = {".pdf", ".xlsx", ".xls", ".csv", ".docx", ".doc", ".txt"}
+# .heic i .tif se spremaju kao dokument: Pillow ih bez dodatka ne otvara, pa nemaju
+# sličicu, ali se uredno čuvaju i preuzimaju. .msg/.eml su mailovi iz arhive.
+DOKUMENTI = {".pdf", ".xlsx", ".xls", ".csv", ".docx", ".doc", ".txt", ".odt", ".rtf",
+             ".pptx", ".ppt", ".msg", ".eml", ".zip", ".heic", ".tif", ".tiff"}
 DOZVOLJENE = SLIKE | DOKUMENTI
 
 MAX_SLIKA = 15 * 1024 * 1024   # 15 MB
-MAX_DOK = 30 * 1024 * 1024     # 30 MB
+# 100 MB: u arhivi nesukladnosti ima mailova s videom dokaza (do ~70 MB).
+MAX_DOK = 100 * 1024 * 1024
 
 
 def _ext(name: str) -> str:

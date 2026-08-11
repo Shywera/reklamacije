@@ -51,6 +51,23 @@ class Reklamacija(Base):
     promjene_sustava: Mapped[str | None] = mapped_column(String(2))
     broj_promjene: Mapped[str | None] = mapped_column(String(50))
 
+    # ── Polja papirnatog obrasca „Nesukladnost" (OB) ───────────────────────
+    # Uvedeno kod uvoza arhive 2026; obrazac ima korake koje QMS prije nije imao.
+    izvorni_broj: Mapped[str | None] = mapped_column(String(30))        # broj kako je upisan u obrascu
+    izvorna_mapa: Mapped[str | None] = mapped_column(String(255))       # mapa u arhivi na disku
+    porijeklo: Mapped[str | None] = mapped_column(String(30), index=True)
+    porijeklo_napomena: Mapped[str | None] = mapped_column(String(200))
+    korekciju_proveo: Mapped[str | None] = mapped_column(String(120))
+    korekcija_datum: Mapped[date | None] = mapped_column(Date)
+    uzrok_potvrdio: Mapped[str | None] = mapped_column(String(120))
+    potrebna_korektivna: Mapped[str | None] = mapped_column(String(2))  # DA/NE iz obrasca
+    radnju_definirao: Mapped[str | None] = mapped_column(String(120))
+    sifra_materijala: Mapped[str | None] = mapped_column(String(60))
+    lot_sarza: Mapped[str | None] = mapped_column(String(120))
+    broj_primke: Mapped[str | None] = mapped_column(String(60))
+    direktor_potpis: Mapped[str | None] = mapped_column(String(120))
+    izvorni_zapis: Mapped[str | None] = mapped_column(Text)             # cijeli obrazac, doslovno
+
     # Provjera učinkovitosti prije zatvaranja — ISO 9001 t.10.2 (Faza 9)
     ucinkovitost_provjerena: Mapped[bool] = mapped_column(Boolean, default=False)
     ucinkovitost_datum: Mapped[date | None] = mapped_column(Date)
@@ -106,6 +123,15 @@ class Reklamacija(Base):
         "VELIKI":   "Veliki",
         "MALI":     "Mali",
     }
+    # Porijeklo nesukladnosti — kvačice iz papirnatog obrasca
+    PORIJEKLO = {
+        "POGRESKA_U_RADU":  "Pogreška u radu",
+        "REKLAMACIJA":      "Reklamacija",
+        "AUDIT":            "Izvještaj internog/vanjskog audita",
+        "CERT_KUCA":        "Izvještaj certifikacijske kuće",
+        "UPRAVINA_OCJENA":  "Upravina ocjena sustava",
+        "OSTALO":           "Ostalo",
+    }
     DEFEKT = {
         "A": "A · Boja i ton",
         "B": "B · Pasovanje / registracija",
@@ -133,6 +159,12 @@ class Reklamacija(Base):
     def tezina_display(self): return self.TEZINA.get(self.tezina or "", "")
     @property
     def defekt_display(self): return self.DEFEKT.get(self.defekt_kategorija or "", "")
+    @property
+    def porijeklo_display(self):
+        naziv = self.PORIJEKLO.get(self.porijeklo or "", "")
+        if naziv and self.porijeklo_napomena:
+            return f"{naziv}: {self.porijeklo_napomena}"
+        return naziv or (self.porijeklo_napomena or "")
 
     @property
     def je_zatvorena(self): return self.status in ("RIJESENO", "ZATVORENO")

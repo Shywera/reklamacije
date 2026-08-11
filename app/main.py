@@ -18,6 +18,7 @@ from fastapi.responses import (FileResponse, PlainTextResponse, RedirectResponse
 from sqlalchemy import func, inspect as sa_inspect, select, text
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.core import migracije
 from app.core.backup import auto_backup, db_putanja
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine
@@ -30,24 +31,7 @@ from app.modules.reklamacije import models  # noqa: F401 — registrira reklamac
 from app.modules.reklamacije.routes import router as reklamacije_router
 
 auto_backup()                          # backup postojeće baze prije starta
-Base.metadata.create_all(bind=engine)
-
-# Dodaj nove stupce na postojeću bazu ako fale (create_all ne mijenja postojeće tablice).
-_rek_cols = {c["name"] for c in sa_inspect(engine).get_columns("reklamacija")}
-_dodaj = [("defekt_kategorija", "VARCHAR(20)"), ("izvor", "VARCHAR(20)"), ("tezina", "VARCHAR(20)"),
-          ("dodijeljeno_id", "INTEGER"), ("dodijeljeno_ime", "VARCHAR(120)"),
-          ("ucinkovitost_provjerena", "BOOLEAN DEFAULT 0"), ("ucinkovitost_datum", "DATE"),
-          ("ucinkovitost_biljeska", "TEXT"),
-          ("fmea_sev", "INTEGER"), ("fmea_occ", "INTEGER"), ("fmea_det", "INTEGER")]
-for _c, _tip in _dodaj:
-    if _c not in _rek_cols:
-        with engine.begin() as _conn:
-            _conn.execute(text(f"ALTER TABLE reklamacija ADD COLUMN {_c} {_tip}"))
-
-# Korisnik.email (Faza 7)
-if "email" not in {c["name"] for c in sa_inspect(engine).get_columns("korisnik")}:
-    with engine.begin() as _conn:
-        _conn.execute(text("ALTER TABLE korisnik ADD COLUMN email VARCHAR(160)"))
+migracije.primijeni()                  # tablice + stupci dodani naknadno
 
 
 def _seed_admin() -> None:
