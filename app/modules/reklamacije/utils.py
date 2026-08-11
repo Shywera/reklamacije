@@ -87,7 +87,8 @@ def generiraj_pdf(r) -> io.BytesIO:
         canvas.setFont(_FONT, 7)
         canvas.setFillColor(_SIVA_TL)
         canvas.drawString(ML, MB - 7 * mm,
-                          f"Generirano: {date.today().strftime('%d.%m.%Y')}  |  ERP Reklamacije")
+                          f"Generirano: {date.today().strftime('%d.%m.%Y')}  |  "
+                          f"QMS — reklamacije i nesukladnosti")
         canvas.drawRightString(ML + CW, MB - 7 * mm, f"Stranica {doc.page}")
         canvas.restoreState()
 
@@ -190,6 +191,19 @@ def generiraj_pdf(r) -> io.BytesIO:
         id_rows.append([cel("KUPAC / DOBAVLJAČ", r.kupac_dobavljac),"","","",
                          cel("REFERENTNI BROJ", r.referentni_broj),""])
         id_spans += [("SPAN",(0,n),(3,n)),("SPAN",(4,n),(5,n))]
+    # Porijeklo nesukladnosti (kvačica iz obrasca) + broj pod kojim je zavedena na papiru
+    if r.porijeklo or r.porijeklo_napomena or r.izvorni_broj:
+        n = len(id_rows)
+        id_rows.append([cel("PORIJEKLO NESUKLADNOSTI", r.porijeklo_display),"","","",
+                         cel("BROJ U OBRASCU", r.izvorni_broj),""])
+        id_spans += [("SPAN",(0,n),(3,n)),("SPAN",(4,n),(5,n))]
+    # Materijal: šifra, lot i primka — bitno kad je uzrok papir od dobavljača
+    if r.sifra_materijala or r.lot_sarza or r.broj_primke:
+        n = len(id_rows)
+        id_rows.append([cel("ŠIFRA MATERIJALA", r.sifra_materijala),"",
+                         cel("LOT / ŠARŽA", r.lot_sarza),"",
+                         cel("BROJ PRIMKE", r.broj_primke),""])
+        id_spans += [("SPAN",(0,n),(1,n)),("SPAN",(2,n),(3,n)),("SPAN",(4,n),(5,n))]
     if r.datum_zatvaranja:
         n = len(id_rows)
         id_rows.append([cel("DATUM ZATVARANJA", r.datum_zatvaranja.strftime("%d.%m.%Y %H:%M")),"","","",cel("",""),""])
@@ -214,13 +228,30 @@ def generiraj_pdf(r) -> io.BytesIO:
     ]))
     story.append(opis_t)
 
-    for label, val in [("KOREKCIJA (NEPOSREDNA RADNJA)", r.korekcija), ("NAPOMENA", r.napomena)]:
-        if val:
-            t = Table([[cel(label, val)]], colWidths=[CW])
-            t.setStyle(TableStyle([("BOX",(0,0),(-1,-1),0.5,_SIVA_LN),
-                                    ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),7),
-                                    ("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),9)]))
-            story.append(t)
+    # Korekcija + tko ju je proveo i kad (kao u obrascu, u istom okviru)
+    if r.korekcija or r.korekciju_proveo:
+        red = [cel("KOREKCIJA (NEPOSREDNA RADNJA)", r.korekcija), ""]
+        stil = [("BOX",(0,0),(-1,-1),0.5,_SIVA_LN),
+                ("INNERGRID",(0,0),(-1,-1),0.3,_SIVA_LN),
+                ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),7),
+                ("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),9),
+                ("VALIGN",(0,0),(-1,-1),"TOP")]
+        if r.korekciju_proveo or r.korekcija_datum:
+            datum_k = r.korekcija_datum.strftime("%d.%m.%Y") if r.korekcija_datum else None
+            red[1] = cel("PROVEO / DATUM",
+                         " · ".join(x for x in (r.korekciju_proveo, datum_k) if x))
+            t = Table([red], colWidths=[CW * 0.66, CW * 0.34])
+        else:
+            t = Table([[red[0]]], colWidths=[CW])
+        t.setStyle(TableStyle(stil))
+        story.append(t)
+
+    if r.napomena:
+        t = Table([[cel("NAPOMENA", r.napomena)]], colWidths=[CW])
+        t.setStyle(TableStyle([("BOX",(0,0),(-1,-1),0.5,_SIVA_LN),
+                                ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),7),
+                                ("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),9)]))
+        story.append(t)
 
     if r.vezana_nesukladnost:
         t = Table([[cel("ISTA NESUKLADNOST EVIDENTIRANA POD BR.", r.vezana_nesukladnost, bold=True)]], colWidths=[CW])
@@ -231,20 +262,26 @@ def generiraj_pdf(r) -> io.BytesIO:
 
     story.append(Spacer(1, 0.3*cm))
 
-    # Analiza uzroka
-    if r.analiza_uzroka or r.uzrok_kategorija:
-        story.append(sek("ANALIZA UZROKA — METODA 5 ZAŠTO"))
+    # Uzrok nesukladnosti — isti redoslijed kao u papirnatom obrascu
+    if r.analiza_uzroka or r.uzrok_kategorija or r.uzrok_potvrdio or r.potrebna_korektivna:
+        story.append(sek("UZROK NESUKLADNOSTI"))
         sAL = ParagraphStyle("AL", fontName=_FONTB, fontSize=7.5, textColor=_SIVA_TL, leading=11)
         sAV = ParagraphStyle("AV", fontName=_FONT, fontSize=9, textColor=_TAMNO, leading=13)
         arows = []
+        if r.analiza_uzroka:
+            arows.append([Paragraph("UZROK", sAL),
+                           Paragraph(_x(r.analiza_uzroka).replace("\n", "<br/>"), sAV)])
         if r.uzrok_kategorija:
             arows.append([Paragraph("KATEGORIJA", sAL),
                            Paragraph(_x(r.uzrok_kategorija),
                                      ParagraphStyle("KU", fontName=_FONTB, fontSize=9, textColor=_TAMNO, leading=13))])
-        if r.analiza_uzroka:
-            for i, ln in enumerate([l for l in r.analiza_uzroka.strip().split("\n") if l.strip()]):
-                arows.append([Paragraph(f"ZAŠTO {i+1}" if i < 5 else "", sAL),
-                               Paragraph(_x(ln.strip()), sAV)])
+        if r.uzrok_potvrdio:
+            arows.append([Paragraph("POTVRDIO", sAL), Paragraph(_x(r.uzrok_potvrdio), sAV)])
+        if r.potrebna_korektivna:
+            tekst = "Da" if r.potrebna_korektivna == "DA" else "Ne"
+            if r.potrebna_korektivna == "DA" and r.radnju_definirao:
+                tekst += f"  ·  mjeru definirao: {r.radnju_definirao}"
+            arows.append([Paragraph("KOREKTIVNA RADNJA", sAL), Paragraph(_x(tekst), sAV)])
         if arows:
             a_t = Table(arows, colWidths=[2.6*cm, CW-2.6*cm])
             a_t.setStyle(TableStyle([
@@ -317,13 +354,22 @@ def generiraj_pdf(r) -> io.BytesIO:
     spl = ParagraphStyle("PL2", fontName=_FONTB, fontSize=7.5, textColor=_SIVA_TL, leading=11)
     spv = ParagraphStyle("PV2", fontName=_FONT, fontSize=9, textColor=_TAMNO, leading=13)
     spp = ParagraphStyle("PP2", fontName=_FONT, fontSize=8.5, textColor=colors.HexColor("#CBD5E1"), leading=22)
+    # Potpisi kao u obrascu: tko je evidentirao, tko je proveo korekciju,
+    # tko je potvrdio uzrok i direktor. Ime se ispiše ako je poznato.
     half = CW / 2
+    datum_kor = r.korekcija_datum.strftime("%d.%m.%Y") if r.korekcija_datum else "__________________________"
     pot_t = Table([
-        [Paragraph("PRIJAVITELJ", spl), Paragraph("VODITELJ KVALITETE", spl)],
-        [Paragraph(_x(r.prijavitelj), spv), Paragraph("", spv)],
+        [Paragraph("EVIDENTIRAO", spl), Paragraph("KOREKCIJU PROVEO", spl)],
+        [Paragraph(_x(r.prijavitelj), spv), Paragraph(_x(r.korekciju_proveo), spv)],
         [Paragraph("Potpis: _______________________________", spp),
          Paragraph("Potpis: _______________________________", spp)],
         [Paragraph(f"Datum: {r.datum_prijave.strftime('%d.%m.%Y')}", spl),
+         Paragraph(f"Datum: {datum_kor}", spl)],
+        [Paragraph("ODGOVORNA OSOBA PODRUČJA (UZROK)", spl), Paragraph("DIREKTOR", spl)],
+        [Paragraph(_x(r.uzrok_potvrdio), spv), Paragraph(_x(r.direktor_potpis), spv)],
+        [Paragraph("Potpis: _______________________________", spp),
+         Paragraph("Potpis: _______________________________", spp)],
+        [Paragraph("Datum: __________________________", spl),
          Paragraph("Datum: __________________________", spl)],
     ], colWidths=[half, half])
     pot_t.setStyle(TableStyle([

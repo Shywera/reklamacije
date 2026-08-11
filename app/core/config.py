@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     # Samostalni Reklamacije/QMS app — vlastiti SQLite. Za Postgres postavi DATABASE_URL u .env.
     database_url: str = "sqlite:///./reklamacije.db"
 
-    # Naziv tvrtke za zaglavlja dokumenata (PDF). Pravi naziv postavi u .env (FIRMA_NAZIV).
-    firma_naziv: str = "DEMO TISAK d.o.o."
+    # Naziv tvrtke za zaglavlja dokumenata (PDF). Drugi naziv se postavi u .env (FIRMA_NAZIV).
+    firma_naziv: str = "Tiskara Reprint d.o.o."
 
     # Prijava / sesija. secret_key potpisuje cookie; admin_password je lozinka
     # početnog admina (oboje se generira u .env pri prvom pokretanju run.bat).
