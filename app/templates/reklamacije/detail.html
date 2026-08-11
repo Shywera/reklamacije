@@ -252,35 +252,71 @@
     </div>
 </div>
 
-{# ── Analiza uzroka ───────────────────────────────────────────────────────── #}
+{# ── Uzrok nesukladnosti — istim redoslijedom kao papirnati obrazac ───────── #}
 <div class="bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden mb-4">
-    <div class="bg-slate-700 px-4 py-2.5"><h2 class="text-xs font-bold uppercase tracking-widest text-white">Analiza uzroka — metoda 5 Zašto</h2></div>
+    <div class="bg-slate-700 px-4 py-2.5"><h2 class="text-xs font-bold uppercase tracking-widest text-white">Uzrok nesukladnosti</h2></div>
     <div class="p-4 grid grid-cols-12 gap-3">
+        <div class="col-span-8">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Korekciju proveo</label>
+            <input type="text" name="korekciju_proveo" value="{{ r.korekciju_proveo or '' if r else '' }}"
+                   placeholder="Ime i prezime (potpis u obrascu)"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Datum korekcije</label>
+            <input type="date" name="korekcija_datum"
+                   value="{{ r.korekcija_datum.isoformat() if r and r.korekcija_datum else '' }}"
+                   class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="col-span-12">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Uzrok nesukladnosti</label>
+            <textarea name="analiza_uzroka" rows="4"
+                      placeholder="Zašto je do toga došlo. Npr. skrivena greška materijala, pogreška u pripremi, istrošen alat…"
+                      class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y">{{ r.analiza_uzroka or '' if r else '' }}</textarea>
+            <p class="text-[10px] text-gray-500 mt-1">
+                Ako uzrok nije očit, pomaže pitati „zašto“ nekoliko puta zaredom i zapisati lanac.
+            </p>
+        </div>
+        <div class="col-span-8">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Uzrok potvrdio (odgovorna osoba područja)</label>
+            <input type="text" name="uzrok_potvrdio" value="{{ r.uzrok_potvrdio or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
         <div class="col-span-4">
             <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Kategorija uzroka</label>
             <input type="text" name="uzrok_kategorija" value="{{ r.uzrok_kategorija or '' if r else '' }}"
-                   placeholder="Npr. ljudska greška, materijal, postupak…"
+                   placeholder="materijal, ljudska greška, postupak…"
                    class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="col-span-12">
-            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">5 Zašto (svaki razlog u novi red)</label>
-            <textarea name="analiza_uzroka" rows="5"
-                      placeholder="Zašto 1: ...&#10;Zašto 2: ...&#10;Zašto 3: ...&#10;Zašto 4: ...&#10;Zašto 5: ..."
-                      class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y">{{ r.analiza_uzroka or '' if r else '' }}</textarea>
-        </div>
-        <div class="col-span-12">
-            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Napomena</label>
-            <textarea name="napomena" rows="2"
-                      class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y">{{ r.napomena or '' if r else '' }}</textarea>
         </div>
 
         <div class="col-span-4">
-            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Vezana nesukladnost (br.)</label>
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Ista nesukladnost već postoji (broj)</label>
             <input type="text" name="vezana_nesukladnost" value="{{ r.vezana_nesukladnost or '' if r else '' }}"
-                   placeholder="RK-2026-XXXX"
+                   placeholder="npr. NS-12/2026"
                    class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
         </div>
-        <div class="col-span-3">
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Treba li korektivna radnja?</label>
+            <select name="potrebna_korektivna" class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">—</option>
+                <option value="DA" {% if r and r.potrebna_korektivna=='DA' %}selected{% endif %}>Da</option>
+                <option value="NE" {% if r and r.potrebna_korektivna=='NE' %}selected{% endif %}>Ne</option>
+            </select>
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Mjeru definirao</label>
+            <input type="text" name="radnju_definirao" value="{{ r.radnju_definirao or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="col-span-12">
+            <p class="text-[10px] text-gray-500 -mb-1">
+                Same mjere, nositelji i rokovi upisuju se niže, u „Korektivne i preventivne mjere (CAPA)“.
+            </p>
+        </div>
+
+        <div class="col-span-4">
             <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Potrebne promjene u sustavu?</label>
             <select name="promjene_sustava" class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">—</option>
@@ -292,6 +328,17 @@
             <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Broj promjene (OB-21)</label>
             <input type="text" name="broj_promjene" value="{{ r.broj_promjene or '' if r else '' }}"
                    class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Direktor (potpis)</label>
+            <input type="text" name="direktor_potpis" value="{{ r.direktor_potpis or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="col-span-12">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Napomena</label>
+            <textarea name="napomena" rows="2"
+                      class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y">{{ r.napomena or '' if r else '' }}</textarea>
         </div>
     </div>
 </div>
@@ -324,42 +371,6 @@
             <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Porijeklo — napomena</label>
             <input type="text" name="porijeklo_napomena" value="{{ r.porijeklo_napomena or '' if r else '' }}"
                    placeholder="npr. materijal, broj audita…"
-                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <div class="col-span-4">
-            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Korekciju proveo</label>
-            <input type="text" name="korekciju_proveo" value="{{ r.korekciju_proveo or '' if r else '' }}"
-                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="col-span-2">
-            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Datum korekcije</label>
-            <input type="date" name="korekcija_datum"
-                   value="{{ r.korekcija_datum.isoformat() if r and r.korekcija_datum else '' }}"
-                   class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="col-span-4">
-            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Uzrok potvrdio (odgovorna osoba)</label>
-            <input type="text" name="uzrok_potvrdio" value="{{ r.uzrok_potvrdio or '' if r else '' }}"
-                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="col-span-2">
-            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Treba korektivna?</label>
-            <select name="potrebna_korektivna" class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">—</option>
-                <option value="DA" {% if r and r.potrebna_korektivna=='DA' %}selected{% endif %}>Da</option>
-                <option value="NE" {% if r and r.potrebna_korektivna=='NE' %}selected{% endif %}>Ne</option>
-            </select>
-        </div>
-
-        <div class="col-span-4">
-            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Mjeru definirao</label>
-            <input type="text" name="radnju_definirao" value="{{ r.radnju_definirao or '' if r else '' }}"
-                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="col-span-4">
-            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Direktor (potpis)</label>
-            <input type="text" name="direktor_potpis" value="{{ r.direktor_potpis or '' if r else '' }}"
                    class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
