@@ -68,6 +68,15 @@ class Reklamacija(Base):
     direktor_potpis: Mapped[str | None] = mapped_column(String(120))
     izvorni_zapis: Mapped[str | None] = mapped_column(Text)             # cijeli obrazac, doslovno
 
+    # ── Reklamacija kupca — polja obrasca „Zapisnik o reklamaciji kupca" (T-8.03.01-03) ──
+    reklamirana_kolicina: Mapped[str | None] = mapped_column(String(60))
+    nacin_rjesenja: Mapped[str | None] = mapped_column(String(20))      # POVRAT_DORADA/BONIFIKACIJA/OSTALO
+    rjesenje_kolicina: Mapped[str | None] = mapped_column(String(60))
+    rjesenje_iznos: Mapped[float | None] = mapped_column(Float)
+    rjesenje_verifikacija: Mapped[str | None] = mapped_column(String(120))
+    rjesenje_datum: Mapped[date | None] = mapped_column(Date)
+    odobrio: Mapped[str | None] = mapped_column(String(120))
+
     # Provjera učinkovitosti prije zatvaranja — ISO 9001 t.10.2 (Faza 9)
     ucinkovitost_provjerena: Mapped[bool] = mapped_column(Boolean, default=False)
     ucinkovitost_datum: Mapped[date | None] = mapped_column(Date)
@@ -94,7 +103,7 @@ class Reklamacija(Base):
     VRSTA = {
         "INTERNA":   "Interna nesukladnost",
         "KUPAC":     "Reklamacija kupca",
-        "DOBAVLJAC": "Nesukladnost dobavljača",
+        "DOBAVLJAC": "Reklamacija materijala",
     }
     STATUS = {
         "NOVO":      "Novo",
@@ -132,6 +141,11 @@ class Reklamacija(Base):
         "UPRAVINA_OCJENA":  "Upravina ocjena sustava",
         "OSTALO":           "Ostalo",
     }
+    NACIN_RJESENJA = {
+        "POVRAT_DORADA": "Povrat / dorada",
+        "BONIFIKACIJA":  "Bonifikacija",
+        "OSTALO":        "Ostalo",
+    }
     DEFEKT = {
         "A": "A · Boja i ton",
         "B": "B · Pasovanje / registracija",
@@ -159,6 +173,8 @@ class Reklamacija(Base):
     def tezina_display(self): return self.TEZINA.get(self.tezina or "", "")
     @property
     def defekt_display(self): return self.DEFEKT.get(self.defekt_kategorija or "", "")
+    @property
+    def nacin_rjesenja_display(self): return self.NACIN_RJESENJA.get(self.nacin_rjesenja or "", "")
     @property
     def porijeklo_display(self):
         naziv = self.PORIJEKLO.get(self.porijeklo or "", "")

@@ -2,10 +2,12 @@
 {% block title %}Reklamacije — Lista{% endblock %}
 {% block content %}
 
+{% set pocetna_vrsta = request.query_params.get('vrsta', '') %}
+{% set vrsta_naslovi = {'INTERNA': 'Nesukladnosti', 'KUPAC': 'Reklamacije kupca', 'DOBAVLJAC': 'Reklamacije materijala'} %}
 <div class="flex items-center justify-between mb-4">
     <div class="flex items-center gap-3">
         <a href="/reklamacije" class="text-sm text-blue-600 hover:underline">← Dashboard</a>
-        <h1 class="text-xl font-bold text-gray-800">Sve reklamacije</h1>
+        <h1 class="text-xl font-bold text-gray-800">{{ vrsta_naslovi.get(pocetna_vrsta, 'Sve reklamacije') }}</h1>
     </div>
     <div class="flex gap-2">
         <a href="/reklamacije/excel/izvoz" class="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-semibold rounded hover:bg-gray-100 transition-colors">↓ Excel</a>
@@ -18,17 +20,14 @@
      x-data="{
          q: '',
          status: '',
-         vrsta: '',
+         vrsta: '{{ pocetna_vrsta }}',
          prioritet: '',
-         moje: {{ 'true' if request.query_params.get('moje') else 'false' }},
-         myId: {{ request.state.user.id if request.state and request.state.user else 0 }},
          load() {
              const p = new URLSearchParams();
              if (this.q)        p.set('q', this.q);
              if (this.status)   p.set('status', this.status);
              if (this.vrsta)    p.set('vrsta', this.vrsta);
              if (this.prioritet) p.set('prioritet', this.prioritet);
-             if (this.moje && this.myId) p.set('dodijeljeni', this.myId);
              htmx.ajax('GET', '/reklamacije/search?' + p.toString(), {target:'#rek-result', swap:'innerHTML'});
          }
      }">
@@ -49,13 +48,8 @@
             {% endfor %}
         </div>
 
-        {# Moje reklamacije #}
-        <button type="button" @click="moje=!moje; load()"
-                :class="moje ? 'bg-amber-500 text-white border-amber-400' : 'text-slate-300 hover:bg-slate-600 hover:text-white border-slate-500'"
-                class="px-2.5 py-1.5 text-[11px] font-semibold rounded border transition-colors shrink-0">★ Moje</button>
-
         {# Vrsta #}
-        <select @change="vrsta=$event.target.value; load()"
+        <select x-model="vrsta" @change="load()"
                 class="px-2 py-1.5 text-xs rounded border border-slate-500 bg-slate-800 text-slate-200 focus:outline-none focus:border-blue-400">
             <option value="">Sve vrste</option>
             {% for kod, label in vrsta_choices %}

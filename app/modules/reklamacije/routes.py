@@ -43,6 +43,10 @@ def _parse_rek(form) -> dict:
             n = int(v)
             return n if 1 <= n <= 10 else None
         except: return None
+    def f(k):
+        v = str(form.get(k, "")).strip().replace(",", ".")
+        try: return float(v)
+        except: return None
 
     return dict(
         vrsta=str(form.get("vrsta", "INTERNA")),
@@ -85,6 +89,14 @@ def _parse_rek(form) -> dict:
         fmea_sev=i10("fmea_sev"),
         fmea_occ=i10("fmea_occ"),
         fmea_det=i10("fmea_det"),
+        # Reklamacija kupca — obrazac „Zapisnik o reklamaciji kupca"
+        reklamirana_kolicina=s("reklamirana_kolicina"),
+        nacin_rjesenja=s("nacin_rjesenja"),
+        rjesenje_kolicina=s("rjesenje_kolicina"),
+        rjesenje_iznos=f("rjesenje_iznos"),
+        rjesenje_verifikacija=s("rjesenje_verifikacija"),
+        rjesenje_datum=d("rjesenje_datum"),
+        odobrio=s("odobrio"),
     )
 
 
@@ -107,6 +119,7 @@ def _ctx():
         "tezina_choices": list(Reklamacija.TEZINA.items()),
         "defekt_choices": list(Reklamacija.DEFEKT.items()),
         "porijeklo_opcije": Reklamacija.PORIJEKLO,
+        "nacin_rjesenja_opcije": Reklamacija.NACIN_RJESENJA,
         "capa_vrsta_choices": list(CAPA.VRSTA.items()),
         "capa_status_choices": list(CAPA.STATUS.items()),
         "trosak_kat_choices": list(StavkaTroska.KATEGORIJA.items()),
@@ -330,10 +343,35 @@ def nova_get(request: Request):
     return templates.TemplateResponse(request, "reklamacije/detail.html", {**_ctx(), "r": None})
 
 
+def _datum_prijave_iz(form, postojeci=None):
+    """Datum prijave iz obrasca, ili None ako nije zadan / ne da se procitati.
+
+    Polje je `type="date"` (bez sata), a u bazi je datetime. VRIJEME se ne dira:
+    kod izmjene se zadrzi sat koji zapis vec ima, kod novog upisa uzme se
+    trenutni. Tako promjena datuma ne pomakne zapis na 00:00 i ne poremeti
+    poredak na listi.
+
+    NE ide kroz `_parse_rek` namjerno: ondje se svako polje primjenjuje bezuvjetno
+    preko `setattr`, pa bi obrazac bez ovog polja tiho obrisao datum prijave.
+    """
+    v = str(form.get("datum_prijave", "")).strip()
+    if not v:
+        return None
+    try:
+        d = date.fromisoformat(v)
+    except ValueError:
+        return None
+    sat = (postojeci or datetime.now()).time()
+    return datetime.combine(d, sat)
+
+
 @router.post("/nova", response_class=RedirectResponse)
 async def nova_post(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     data = _parse_rek(form)
+    dp = _datum_prijave_iz(form)
+    if dp is not None:
+        data["datum_prijave"] = dp
     r = Reklamacija(**data, broj_predmeta=_auto_broj(db))
     db.add(r); db.commit(); db.refresh(r)
     try: mailer.obavijesti_nova(db, r)
@@ -393,6 +431,39 @@ async def update(request: Request, id: int, db: Session = Depends(get_db)):
     if not r: return RedirectResponse("/reklamacije/lista", status_code=303)
     form  = await request.form()
     data  = _parse_rek(form)
+
+    # Učinkovitost i zaduženje dolaze iz ISTOG obrasca (polja gore na stranici
+    # vezana su na njega preko form="glavni"). Prije su to bili zasebni obrasci
+    # sa svojim gumbima; svaki je ponovo učitavao stranicu i brisao sve što je
+    # dotad upisano u glavni obrazac, pa se ništa nije moglo spremiti
+    # (prijavljeno 15.09.2026.). Primjenjuju se PRIJE provjere zatvaranja, da
+    # se u jednom spremanju smije i potvrditi učinkovitost i zatvoriti predmet.
+    if "potvrdi" in form or "ucinkovitost_biljeska" in form:
+        potvrdi = str(form.get("potvrdi", "")).strip() in ("1", "on", "true", "da")
+        r.ucinkovitost_biljeska = str(form.get("ucinkovitost_biljeska", "")).strip() or None
+        if potvrdi != bool(r.ucinkovitost_provjerena):
+            r.ucinkovitost_provjerena = potvrdi
+            r.ucinkovitost_datum = date.today() if potvrdi else None
+
+    dp = _datum_prijave_iz(form, r.datum_prijave)
+    if dp is not None:
+        r.datum_prijave = dp
+
+    if "dodijeljeno_id" in form:
+        kid = str(form.get("dodijeljeno_id", "")).strip()
+        stari = r.dodijeljeno_id
+        if not kid:
+            r.dodijeljeno_id = None
+            r.dodijeljeno_ime = None
+        else:
+            u = db.get(User, int(kid)) if kid.isdigit() else None
+            if u:
+                r.dodijeljeno_id = u.id
+                r.dodijeljeno_ime = u.ime or u.username
+        nova_dodjela = r.dodijeljeno_id is not None and r.dodijeljeno_id != stari
+    else:
+        nova_dodjela = False
+
     # Gate učinkovitosti (ISO 10.2): zatvaranje traži potvrđenu učinkovitost.
     if data["status"] == "ZATVORENO" and not r.ucinkovitost_provjerena:
         data["status"] = "RIJESENO"
@@ -410,9 +481,15 @@ async def update(request: Request, id: int, db: Session = Depends(get_db)):
     for k, v in data.items():
         setattr(r, k, v)
     db.commit()
+    if nova_dodjela:
+        try: mailer.obavijesti_dodjela(db, r)
+        except Exception: pass
     return RedirectResponse(f"/reklamacije/{id}", status_code=303)
 
 
+# Rute /ucinkovitost i /dodijeli vise se NE koriste sa stranice - oba polja su
+# od 15.09.2026. dio glavnog obrasca. Ostaju radi starih otvorenih kartica i
+# eventualnih vanjskih poveznica; brisati tek kad se zna da ih nitko ne gadja.
 @router.post("/{id}/ucinkovitost", response_class=RedirectResponse)
 async def ucinkovitost(request: Request, id: int, db: Session = Depends(get_db)):
     r = db.get(Reklamacija, id)

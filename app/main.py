@@ -53,6 +53,21 @@ _seed_admin()
 
 app = FastAPI(title="Reklamacije / QMS", docs_url="/api-docs", redoc_url=None)
 
+# Zajednički dnevnik hub-a (Programi\hub_log.py) - tko je što radio.
+# Uvijek u try/except: dnevnik je pomoćna stvar i ne smije spriječiti
+# pokretanje programa ako ga netko premjesti ili obriše.
+try:
+    import sys as _sys
+    from pathlib import Path as _Path
+    _korijen = str(_Path(__file__).resolve().parents[3])   # ...\Programi
+    if _korijen not in _sys.path:
+        _sys.path.insert(0, _korijen)
+    import hub_log as _hub_log
+    _hub_log.ukljuci(app, "Reklamacije")
+except Exception:                                          # noqa: BLE001
+    pass
+
+
 
 @app.middleware("http")
 async def auth_audit(request: Request, call_next):

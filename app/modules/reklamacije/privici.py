@@ -14,7 +14,8 @@ SLIKE = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 # .heic i .tif se spremaju kao dokument: Pillow ih bez dodatka ne otvara, pa nemaju
 # sličicu, ali se uredno čuvaju i preuzimaju. .msg/.eml su mailovi iz arhive.
 DOKUMENTI = {".pdf", ".xlsx", ".xls", ".csv", ".docx", ".doc", ".txt", ".odt", ".rtf",
-             ".pptx", ".ppt", ".msg", ".eml", ".zip", ".heic", ".tif", ".tiff"}
+             ".pptx", ".ppt", ".msg", ".eml", ".zip", ".heic", ".tif", ".tiff",
+             ".mp4", ".mov", ".avi"}
 DOZVOLJENE = SLIKE | DOKUMENTI
 
 MAX_SLIKA = 15 * 1024 * 1024   # 15 MB

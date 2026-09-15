@@ -5,8 +5,16 @@
 {% set s_boje = {"NOVO":"bg-blue-100 text-blue-700","U_OBRADI":"bg-amber-100 text-amber-700","CEKA":"bg-cyan-100 text-cyan-700","RIJESENO":"bg-green-100 text-green-700","ZATVORENO":"bg-gray-100 text-gray-500"} %}
 {% set p_boje = {"NIZAK":"bg-green-100 text-green-700","SREDNJI":"bg-blue-100 text-blue-700","VISOK":"bg-amber-100 text-amber-700","KRITICAN":"bg-red-100 text-red-700"} %}
 
-{# Breadcrumb #}
-<div class="flex items-center gap-2 mb-4 flex-wrap">
+{# Breadcrumb + glavna akcija.
+
+   Traka je LJEPLJIVA NA VRHU, a "Spremi predmet" je gore DESNO: obrazac je dug
+   preko 500 redaka, pa je jedini gumb bio na dnu, izvan vidljivog dijela. Zato
+   se posezalo za gumbom u kutiji ucinkovitosti (koji je spremao samo nju i
+   ponovo ucitavao stranicu, brisuci sve upisano) - prijavljeno 15.09.2026.
+
+   Gumb je fizicki IZVAN <form>, ali mu preko form="glavni" ipak pripada. #}
+<div class="sticky top-0 z-30 -mx-4 px-4 py-2.5 mb-4 bg-white/95 backdrop-blur
+            border-b border-gray-300 flex items-center gap-2 flex-wrap">
     <a href="/reklamacije" class="text-sm text-blue-600 hover:underline">Reklamacije</a>
     <span class="text-gray-400">/</span>
     <a href="/reklamacije/lista" class="text-sm text-blue-600 hover:underline">Lista</a>
@@ -18,12 +26,21 @@
     <span class="text-[11px] px-2 py-0.5 rounded-full font-semibold ml-1 {{ s_boje.get(r.status,'bg-gray-100 text-gray-600') }}">{{ r.status_display }}</span>
     <span class="text-[11px] px-2 py-0.5 rounded-full font-semibold {{ p_boje.get(r.prioritet,'bg-gray-100 text-gray-600') }}">{{ r.prioritet_display }}</span>
     {% endif %}
-    {% if r %}
-    <div class="ml-auto flex gap-2">
+
+    <div class="ml-auto flex items-center gap-2">
+        <span id="nespremljeno" class="hidden text-xs font-semibold text-amber-700 bg-amber-50
+              border border-amber-300 rounded px-2 py-1 whitespace-nowrap">● nespremljeno</span>
+        {% if r %}
         <a href="/reklamacije/{{ r.id }}/pdf" target="_blank"
            class="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-semibold rounded hover:bg-gray-100 transition-colors">↓ PDF</a>
+        {% endif %}
+        {# Boja se mijenja u crveno cim ima nespremljenih izmjena (vidi skriptu
+           na dnu). Zeleno/plavo = sve spremljeno, crveno = nesto ceka. #}
+        <button type="submit" form="glavni" id="spremi-gore"
+                class="px-4 py-2 text-white text-sm font-semibold rounded shadow-sm transition-colors whitespace-nowrap bg-blue-600 hover:bg-blue-700">
+            <span id="spremi-tekst">Spremi predmet</span>
+        </button>
     </div>
-    {% endif %}
 </div>
 
 {% if r and request.query_params.get('greska') %}
@@ -43,19 +60,19 @@
         <span class="text-[11px] text-amber-100">nije potvrđeno — zatvaranje blokirano</span>
         {% endif %}
     </div>
-    <form method="post" action="/reklamacije/{{ r.id }}/ucinkovitost" class="p-3 flex items-end gap-3 flex-wrap">
+    <div class="p-3 flex items-end gap-3 flex-wrap">
         <div class="flex-1 min-w-[240px]">
             <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Bilješka o provjeri učinkovitosti</label>
-            <input type="text" name="ucinkovitost_biljeska" value="{{ r.ucinkovitost_biljeska or '' }}"
+            <input type="text" name="ucinkovitost_biljeska" form="glavni" value="{{ r.ucinkovitost_biljeska or '' }}"
                    placeholder="Kako je potvrđeno da mjere djeluju (npr. nema ponavljanja kroz 3 serije)…"
                    class="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <label class="flex items-center gap-1.5 text-sm pb-1.5">
-            <input type="checkbox" name="potvrdi" value="1" {% if r.ucinkovitost_provjerena %}checked{% endif %} class="rounded border-gray-300">
+            <input type="checkbox" name="potvrdi" value="1" form="glavni" {% if r.ucinkovitost_provjerena %}checked{% endif %} class="rounded border-gray-300">
             <span>Učinkovitost potvrđena</span>
         </label>
-        <button type="submit" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-semibold rounded">Spremi</button>
-    </form>
+        <span class="text-[11px] text-gray-500 pb-2">sprema se gumbom „Spremi predmet“ gore desno</span>
+    </div>
 </div>
 
 {# ── Zaduženje ────────────────────────────────────────────────────────────── #}
@@ -66,19 +83,25 @@
     {% else %}
     <span class="text-sm text-gray-400 italic">nije dodijeljeno</span>
     {% endif %}
-    <form method="post" action="/reklamacije/{{ r.id }}/dodijeli" class="ml-auto flex items-center gap-2">
-        <select name="dodijeljeno_id" onchange="this.form.submit()"
+    {# Bez onchange="this.form.submit()": promjena izbornika je odmah ponovo
+       ucitavala stranicu i brisala sve sto je dotad upisano u obrazac ispod. #}
+    <div class="ml-auto flex items-center gap-2">
+        <select name="dodijeljeno_id" form="glavni"
                 class="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">— nedodijeljeno —</option>
             {% for k in korisnici %}
             <option value="{{ k.id }}" {% if r.dodijeljeno_id==k.id %}selected{% endif %}>{{ k.ime or k.username }}</option>
             {% endfor %}
         </select>
-    </form>
+    </div>
 </div>
 {% endif %}
 
-<form method="post" action="{% if r %}/reklamacije/{{ r.id }}{% else %}/reklamacije/nova{% endif %}">
+{# id="glavni": polja gore (ucinkovitost, zaduzenje) nisu fizicki unutar ovog
+   <form>, ali mu preko atributa form="glavni" ipak pripadaju. Tako postoji
+   SAMO JEDAN "Spremi" za cijeli predmet. Prije su to bili zasebni obrasci sa
+   svojim gumbima, i svaki je ponovo ucitavao stranicu i brisao sve upisano. #}
+<form id="glavni" method="post" action="{% if r %}/reklamacije/{{ r.id }}{% else %}/reklamacije/nova{% endif %}">
 
 {# ── Opći podaci ─────────────────────────────────────────────────────────── #}
 <div class="bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden mb-4">
@@ -108,9 +131,19 @@
             </select>
         </div>
 
-        <div class="col-span-3">
+        <div class="col-span-2">
             <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Prijavitelj *</label>
             <input type="text" name="prijavitelj" required value="{{ r.prijavitelj if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-2">
+            {# Datum prijave se do 15.09.2026. postavljao sam i nije se dao mijenjati.
+               Kod uvoza arhive i kod naknadnog upisa papirnate prijave to je bilo
+               krivo: predmet od prosle godine dobio bi danasnji datum. Vrijeme
+               (sat) se NE dira - cuva se ono koje zapis vec ima. #}
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Datum prijave</label>
+            <input type="date" name="datum_prijave"
+                   value="{{ r.datum_prijave.date().isoformat() if r and r.datum_prijave else '' }}"
                    class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div class="col-span-2">
@@ -135,7 +168,7 @@
             <input type="date" name="rok_rjesavanja" value="{{ r.rok_rjesavanja.isoformat() if r and r.rok_rjesavanja else '' }}"
                    class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
-        <div class="col-span-3">
+        <div class="col-span-2">
             <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Kupac / Dobavljač</label>
             <input type="text" name="kupac_dobavljac" value="{{ r.kupac_dobavljac or '' if r else '' }}"
                    class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -403,10 +436,70 @@
     </div>
 </div>
 
-{# Akcije #}
-<div class="flex items-center justify-between mb-6">
-    <div class="flex gap-2">
-        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded transition-colors">Spremi</button>
+{# ── Reklamacija kupca — obrazac „Zapisnik o reklamaciji kupca" ──────────────── #}
+<div class="bg-white rounded-lg border border-gray-300 shadow-md overflow-hidden mb-4">
+    <div class="bg-slate-700 px-4 py-2.5">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-white">Reklamacija kupca</h2>
+    </div>
+    <div class="p-4 grid grid-cols-12 gap-3">
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Reklamirana količina</label>
+            <input type="text" name="reklamirana_kolicina" value="{{ r.reklamirana_kolicina or '' if r else '' }}"
+                   placeholder="npr. 478.000 kom"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Način rješenja</label>
+            <select name="nacin_rjesenja" class="w-full border border-gray-400 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">—</option>
+                {% for k, v in nacin_rjesenja_opcije.items() %}
+                <option value="{{ k }}" {% if r and r.nacin_rjesenja==k %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-span-4">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Rješenje — količina</label>
+            <input type="text" name="rjesenje_kolicina" value="{{ r.rjesenje_kolicina or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="col-span-3">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Rješenje — iznos (€)</label>
+            <input type="number" step="0.01" name="rjesenje_iznos" value="{{ r.rjesenje_iznos if r and r.rjesenje_iznos is not none else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-3">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Datum rješenja</label>
+            <input type="date" name="rjesenje_datum" value="{{ r.rjesenje_datum or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-3">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Verifikacija</label>
+            <input type="text" name="rjesenje_verifikacija" value="{{ r.rjesenje_verifikacija or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-3">
+            <label class="block text-[10px] font-semibold text-gray-500 mb-0.5 uppercase">Odobrio</label>
+            <input type="text" name="odobrio" value="{{ r.odobrio or '' if r else '' }}"
+                   class="w-full border border-gray-400 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+    </div>
+</div>
+
+{# Akcije.
+
+   Traka je LJEPLJIVA (sticky bottom-0): obrazac je dugacak preko 500 redaka, pa
+   je gumb "Spremi" bio na dnu, izvan vidljivog dijela. Zbog toga se posezalo za
+   gumbom "Spremi" u kutiji ucinkovitosti na vrhu, sto je ponovo ucitavalo
+   stranicu i brisalo sve upisano (prijavljeno 15.09.2026.).
+   Kako je traka unutar <form>, lijepi se za dno ekrana dok se gleda obrazac, a
+   nestane kad se dodje do CAPA/troskova ispod. #}
+{# Glavni "Spremi" je gore desno u ljepljivoj traci. Ovaj dolje je samo zgodan
+   kad se vec dodje do kraja obrasca; namjerno NIJE ljepljiv, da ne budu dvije
+   plutajuce trake na ekranu. #}
+<div class="flex items-center justify-between gap-3 flex-wrap mb-6 pt-3 border-t border-gray-300">
+    <div class="flex gap-2 items-center">
+        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded transition-colors shadow-sm">Spremi predmet</button>
         <a href="/reklamacije/lista" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-semibold rounded transition-colors">Odustani</a>
     </div>
     {% if r %}
@@ -491,6 +584,71 @@
     &nbsp;·&nbsp; Ažurirano: {{ r.datum_azuriranja.strftime("%d.%m.%Y %H:%M") }}
     {% if r.datum_zatvaranja %}&nbsp;·&nbsp; Zatvoreno: {{ r.datum_zatvaranja.strftime("%d.%m.%Y %H:%M") }}{% endif %}
 </div>
+{% endif %}
+
+{% if r %}
+{# Zastita od tihog gubitka upisanog (15.09.2026.).
+
+   Sto se ovdje sprema kojim gumbom:
+     * OPCI PODACI, obrazac nesukladnosti, reklamacija kupca, FMEA, te
+       UCINKOVITOST i ZADUZENJE (polja gore, vezana preko form="glavni")
+       -> jedan gumb "Spremi predmet" gore desno.
+     * CAPA, TROSKOVI (COPQ), SCAR, PRIVICI -> HTMX, svaki svojim gumbom,
+       sprema se ODMAH i osvjezava samo svoju sekciju. Ne diraju glavni
+       obrazac i ne mogu izgubiti ono sto je u njemu upisano.
+
+   Gumb gore desno pocrveni cim ima nespremljenih izmjena, a odlazak sa
+   stranice prije spremanja trazi potvrdu. #}
+<script>
+(function () {
+  var glavni = document.getElementById("glavni");
+  if (!glavni) return;
+
+  var gumb   = document.getElementById("spremi-gore");
+  var tekst  = document.getElementById("spremi-tekst");
+  var oznaka = document.getElementById("nespremljeno");
+
+  var MIRNO  = ["bg-blue-600", "hover:bg-blue-700"];
+  var ALARM  = ["bg-red-600", "hover:bg-red-700", "ring-2", "ring-red-300"];
+
+  // Stanje obrasca kao tekst; usporedbom s pocetnim znamo ima li izmjena.
+  function stanje() {
+    try { return new URLSearchParams(new FormData(glavni)).toString(); }
+    catch (e) { return ""; }
+  }
+  var pocetno = stanje(), saljemo = false;
+  function prljav() { return !saljemo && stanje() !== pocetno; }
+
+  function osvjezi() {
+    var p = prljav();
+    if (oznaka) oznaka.classList.toggle("hidden", !p);
+    if (gumb) {
+      MIRNO.forEach(function (c) { gumb.classList.toggle(c, !p); });
+      ALARM.forEach(function (c) { gumb.classList.toggle(c, p); });
+    }
+    if (tekst) tekst.textContent = p ? "Spremi predmet ●" : "Spremi predmet";
+    document.title = (p ? "● " : "") + document.title.replace(/^● /, "");
+  }
+
+  glavni.addEventListener("input", osvjezi);
+  glavni.addEventListener("change", osvjezi);
+  glavni.addEventListener("submit", function () { saljemo = true; osvjezi(); });
+
+  // Odlazak sa stranice prije spremanja: zatvaranje kartice, Natrag, klik na
+  // link (Lista, Reklamacije, PDF u istoj kartici...). Preglednik pokaze svoju
+  // poruku; tekst se ne da mijenjati, ali upozorenje se pojavi.
+  window.addEventListener("beforeunload", function (e) {
+    if (prljav()) { e.preventDefault(); e.returnValue = ""; }
+  });
+
+  // HTMX sekcije (CAPA, troskovi, SCAR, privici) spremaju se same i NE gase
+  // stranicu, pa ne gube nista. Ali nakon njihovog osvjezavanja treba ponovo
+  // izmjeriti stanje, jer se dio DOM-a zamijenio.
+  document.body.addEventListener("htmx:afterSwap", osvjezi);
+
+  osvjezi();
+})();
+</script>
 {% endif %}
 
 {% endblock %}

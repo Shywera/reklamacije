@@ -41,6 +41,14 @@ NOVI_STUPCI = [
     ("reklamacija", "direktor_potpis", "VARCHAR(120)"),
     ("reklamacija", "izvorni_zapis", "TEXT"),
     ("korisnik", "email", "VARCHAR(160)"),
+    # Reklamacija kupca — obrazac „Zapisnik o reklamaciji kupca" (uvoz arhive Reklamacije kupaca)
+    ("reklamacija", "reklamirana_kolicina", "VARCHAR(60)"),
+    ("reklamacija", "nacin_rjesenja", "VARCHAR(20)"),
+    ("reklamacija", "rjesenje_kolicina", "VARCHAR(60)"),
+    ("reklamacija", "rjesenje_iznos", "FLOAT"),
+    ("reklamacija", "rjesenje_verifikacija", "VARCHAR(120)"),
+    ("reklamacija", "rjesenje_datum", "DATE"),
+    ("reklamacija", "odobrio", "VARCHAR(120)"),
 ]
 
 
